@@ -1,0 +1,46 @@
+name: campus_transit
+description: >
+  College Transportation Management Platform — single Flutter app,
+  role-based shells (student, faculty, driver, manager, master admin).
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Routing (role-based redirects)
+  go_router: ^14.2.0
+
+  # Maps (OpenStreetMap — free, no billing setup needed for the demo)
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # Driver GPS (wired up once we're past mocks — included now so the
+  # permission-request screens can be built against the real plugin)
+  geolocator: ^12.0.0
+
+  # Bus QR scanning (driver flow) — UI only for now; the backend
+  # RPC to resolve a scanned code to a trip doesn't exist yet
+  mobile_scanner: ^5.2.3
+
+  # Small utilities
+  intl: ^0.19.0
+  uuid: ^4.4.2
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
