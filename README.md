@@ -1,2 +1,2 @@
 # Vbus
-Multi-college transport SaaS platform
+College bus tracking SaaS platform
