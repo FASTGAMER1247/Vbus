@@ -29,8 +29,30 @@ class MockSeed {
   );
 
   static const bus023 = Bus(id: 'bus-023', busNumber: '023', registrationNumber: 'TS 09 AB 1234', capacity: 42);
+  static const bus015 = Bus(id: 'bus-015', busNumber: '015', registrationNumber: 'TS 09 CD 5678', capacity: 50);
+  static const bus042 = Bus(id: 'bus-042', busNumber: '042', registrationNumber: 'TS 09 EF 9012', capacity: 36);
 
   static const driverRamesh = DriverProfile(id: 'driver-1', name: 'Ramesh K', phone: '+91 90000 00001');
+  static const driverSuresh = DriverProfile(id: 'driver-2', name: 'Suresh V', phone: '+91 90000 00002');
+  static const driverAnand = DriverProfile(id: 'driver-3', name: 'Anand P', phone: '+91 90000 00003');
+
+  static final route12Stops = <Stop>[
+    const Stop(id: 'stop-12-1', name: 'Secunderabad Stn', latitude: 17.4334, longitude: 78.5044, order: 1, expectedTime: '7:10 AM'),
+    const Stop(id: 'stop-12-2', name: 'Paradise', latitude: 17.4422, longitude: 78.4875, order: 2, expectedTime: '7:20 AM'),
+    const Stop(id: 'stop-12-3', name: 'Begumpet', latitude: 17.4448, longitude: 78.4674, order: 3, expectedTime: '7:32 AM'),
+  ];
+
+  static final route12 = TransportRoute(
+    id: 'route-12',
+    name: 'Route 12 - Secunderabad',
+    stops: route12Stops,
+    estimatedDistanceKm: 18.2,
+    expectedDuration: const Duration(hours: 1, minutes: 40),
+  );
+
+  static final initialBuses = <Bus>[bus023, bus015, bus042];
+  static final initialDrivers = <DriverProfile>[driverRamesh, driverSuresh, driverAnand];
+  static final initialRoutes = <TransportRoute>[route7, route12];
 
   // ---- Demo accounts, one per role ----
   static const studentUser = AppUser(

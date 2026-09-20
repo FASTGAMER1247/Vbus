@@ -8,7 +8,18 @@ import '../features/driver/identify_bus_screen.dart';
 import '../features/driver/permission_onboarding_screen.dart';
 import '../features/driver/trip_completed_screen.dart';
 import '../features/driver/trip_confirmation_screen.dart';
+import '../features/manager/assignment_screen.dart';
+import '../features/manager/bus_form_screen.dart';
+import '../features/manager/bus_list_screen.dart';
+import '../features/manager/create_trip_screen.dart';
+import '../features/manager/driver_form_screen.dart';
+import '../features/manager/driver_list_screen.dart';
 import '../features/manager/manager_home_screen.dart';
+import '../features/manager/manager_live_fleet_screen.dart';
+import '../features/manager/manager_trip_list_screen.dart';
+import '../features/manager/route_builder_screen.dart';
+import '../features/manager/route_list_screen.dart';
+import '../features/manager/trip_summary_screen.dart';
 import '../features/master_admin/master_admin_home_screen.dart';
 import '../features/student/login_screen.dart';
 import '../features/student/student_home_screen.dart';
@@ -60,8 +71,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/driver/active', builder: (context, state) => const ActiveTripScreen()),
       GoRoute(path: '/driver/completed', builder: (context, state) => const TripCompletedScreen()),
 
-      // Manager (M1–M5) — stub for now, built next
+      // Manager (M1–M5)
       GoRoute(path: '/manager', builder: (context, state) => const ManagerHomeScreen()),
+      GoRoute(path: '/manager/fleet', builder: (context, state) => const ManagerLiveFleetScreen()),
+      GoRoute(path: '/manager/buses', builder: (context, state) => const BusListScreen()),
+      GoRoute(path: '/manager/buses/new', builder: (context, state) => const BusFormScreen()),
+      GoRoute(path: '/manager/drivers', builder: (context, state) => const DriverListScreen()),
+      GoRoute(path: '/manager/drivers/new', builder: (context, state) => const DriverFormScreen()),
+      GoRoute(path: '/manager/routes', builder: (context, state) => const RouteListScreen()),
+      GoRoute(path: '/manager/routes/new', builder: (context, state) => const RouteBuilderScreen()),
+      GoRoute(path: '/manager/assignments', builder: (context, state) => const AssignmentScreen()),
+      GoRoute(path: '/manager/trips', builder: (context, state) => const ManagerTripListScreen()),
+      GoRoute(path: '/manager/trips/new', builder: (context, state) => const CreateTripScreen()),
+      GoRoute(
+        path: '/manager/trips/:id',
+        builder: (context, state) => TripSummaryScreen(tripId: state.pathParameters['id'] ?? ''),
+      ),
 
       // Master Admin (A1–A3) — stub for now, built next
       GoRoute(path: '/admin', builder: (context, state) => const MasterAdminHomeScreen()),

@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/models/app_user.dart';
 import '../data/mock/mock_auth_repository.dart';
 import '../data/mock/mock_driver_repository.dart';
+import '../data/mock/mock_manager_repository.dart';
 import '../data/mock/mock_transport_repository.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/driver_repository.dart';
+import '../data/repositories/manager_repository.dart';
 import '../data/repositories/transport_repository.dart';
 
 /// THE SWITCH POINT.
@@ -25,6 +27,10 @@ final transportRepositoryProvider = Provider<TransportRepository>((ref) {
 
 final driverRepositoryProvider = Provider<DriverRepository>((ref) {
   return MockDriverRepository();
+});
+
+final managerRepositoryProvider = Provider<ManagerRepository>((ref) {
+  return MockManagerRepository();
 });
 
 /// Current signed-in user. Null = logged out. app/router.dart watches
