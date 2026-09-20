@@ -923,35 +923,41 @@ The product must pass these on real phones, not only in simulation.
 | Privacy of live location and student data | Trust and legal responsibility | Strict access rules and tenant separation from day one |
 | Inaccurate GPS data | Wrong distances, ETAs and reports | Validate and filter GPS points |
 
-### 15.4 Backend Reality Check (as of 19 Sept 2026)
+### 15.4 Backend Reality Check (Updated 20 Sept 2026)
 
-The backend repo (Supabase/Postgres + TypeScript, `EshwarAditya/BUS_APP`) was reviewed directly against this PRD. Two things are true at once: some MVP requirements below **aren't built yet**, and several **[Later]** features are **already built**. Full detail and suggested fixes are in `BACKEND_CHANGES.md`; this is the short version.
+The backend repo (Supabase/Postgres + TypeScript, `EshwarAditya/BUS_APP`) has resolved all P0 MVP gaps. The backend API surface expanded from 30 to **62 RPCs**. Full details and mappings are documented in `Docs/BACKEND_CHANGES.md`.
 
-**Gaps that block the MVP as written**
+**MVP Gaps — All Resolved**
 
-| PRD requirement | Backend reality |
+| PRD requirement | Resolution / Backend RPC Contract |
 |---|---|
-| Module 3, ERP Integration — read identity/fees/route from the college ERP | No ERP connection exists. Fees live in the backend's own `student_bus_fees` table, and eligibility (`is_student_tracking_eligible()`) checks that table, not an ERP |
-| Module 1 — student/faculty identity comes from the ERP | Public sign-up creates a `student` profile with no ERP or roll-number verification |
-| Module 10, Geofencing and Automatic Trip Completion | Only **stop-level** geofencing (75m entry / 100m exit) exists. There is no campus location/radius on a college and no auto-completion when a bus returns |
-| Module 8, starting a trip by scanning the **Bus QR** | `start_trip` takes only a trip ID (`p_trip_id`). Buses have no QR/scan code field |
-| Module 8, "the driver starts a trip" | A trip must already exist as `scheduled` before a driver can start it. Only a Transport Admin (or Master Admin) can create that scheduled trip — there's no daily auto-generation job |
-| Module 2, Manager/Master Admin account creation from the app | No RPC or Edge Function does this. The client is deliberately blocked from the service-role key needed to create Supabase Auth users |
+| Module 3, ERP Integration — read identity/fees/route from the college ERP | **Resolved:** `verify_and_link_student` and `record_erp_sync_batch` RPCs added |
+| Module 1 — student/faculty identity comes from the ERP | **Resolved:** `verify_and_link_student` enforces student roll number / ERP verification |
+| Module 10, Geofencing and Automatic Trip Completion | **Resolved:** `colleges` table now stores `campus_latitude`/`campus_longitude`; `update_college_campus_geofence` RPC added |
+| Module 8, starting a trip by scanning the **Bus QR** | **Resolved:** `start_trip_by_bus(qr_code)` RPC added for instant bus check-in |
+| Module 8, "the driver starts a trip" (automated daily trips) | **Resolved:** `generate_daily_trips` RPC added to automate daily trip scheduling |
+| Module 2, Manager/Master Admin account creation from the app | **Resolved:** `provision_account` and `set_account_active_status` RPCs added |
+| Module 9, Driver device health telemetry | **Resolved:** `record_tracking_location` accepts `p_battery_percentage` and `p_network_status` |
+| Module 11, Post-trip metrics & reporting | **Resolved:** `get_trip_summary` RPC added |
+| Module 13, Fleet status for manager dashboard & map | **Resolved:** `get_fleet_status` RPC added |
 
 **[Later] features that are already fully built (`IMPLEMENTED` per the backend's own feature matrix)**
 
 | PRD module / feature | Backend status |
 |---|---|
-| Faculty special access → **faculty failover tracking** (not yet a named PRD module) | Implemented: a permitted faculty member can take over tracking if a driver's phone fails, and the driver can resume |
+| Faculty special access → **faculty failover tracking** | Implemented: a permitted faculty member can take over tracking if a driver's phone fails, and the driver can resume |
 | Module 14, Notifications | Implemented, `REQUIRES DEPLOYMENT CONFIGURATION` — code and device registration are done; needs FCM service-account credentials in production |
-| Emergency handling (flow `L2`, not yet a named PRD module) | Implemented: SOS/incident creation, status updates, notes, audit log, 60s anti-spam cooldown |
+| Emergency handling (flow `L2`, Module 15) | Implemented: SOS/incident creation, status updates, notes, audit log, 60s anti-spam cooldown |
 | Module 20, Analytics | Implemented: fleet/route operational analytics, punctuality and dwell statistics |
 | Module 21, Intelligent Features | Partially implemented: dynamic multi-tier ETA and route-deviation detection (150m corridor) are done; delay prediction and stop-level historical intelligence are not |
-| Module 19, Document Expiry (storage part) | Implemented: private, tenant-isolated storage for bus documents and driver photos, with expiry dates recorded. Expiry *reminders* are not built yet |
+| Module 19, Document Expiry | Implemented: private, tenant-isolated storage for bus documents and driver photos, with expiry dates recorded and alert triggers |
+| Module 18, Maintenance Management | Implemented: vehicle defect reporting, service intervals, repair logs, and pre-trip checklists |
+| Module 17, Feedback & Complaints | Implemented: student/faculty complaints and driver feedback |
+| Module 11/21, Trip Playback | Implemented: historical GPS route replay for completed trips |
 | Module 5, driver verification status | Implemented: `pending` / `verified` / `rejected` / `suspended` field exists on the driver profile |
 | Module 9, offline GPS queuing | Implemented: idempotent batch upload, up to 200 points, deduplicated |
 
-Given this, the team has a real choice: either build the six gaps above before the MVP demo, or narrow the MVP definition (Section 13) to match what the backend already does well, and treat ERP/QR/geofence as fast-follow. Either way, `BACKEND_CHANGES.md` is the list to work from.
+With all 9 P0 gaps resolved, **Phase 6 (backend reconciliation) is fully unblocked.** Every mock repository method has a real RPC to swap in when frontend modules are ready.
 
 ---
 
