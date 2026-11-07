@@ -24,7 +24,7 @@ Covers `flow.md` S1–S4, screens ST-1 through ST-10.
 
 **Done when:** a student can log in, see their bus card, watch it move on the live map, and browse their route — all against mock data.
 
-## Phase 2: Driver flow — next
+## Phase 2: Driver flow — done
 
 Covers `flow.md` D1–D5, screens DR-1 through DR-10. The riskiest phase, because background GPS behavior can't really be judged until it runs on a real phone with the screen locked.
 
@@ -38,7 +38,7 @@ Covers `flow.md` D1–D5, screens DR-1 through DR-10. The riskiest phase, becaus
 
 **Done when:** a driver can go from login through a full mock trip — identify bus, start, see live status update, end — and the permission-onboarding screens are tested against real device permission prompts (even though the GPS data itself is still mocked).
 
-## Phase 3: Manager flow
+## Phase 3: Manager flow — done
 
 Covers `flow.md` M1–M5, screens MG-1 through MG-14. The biggest surface area — web layout matters here (`design.md` §4.2).
 
@@ -50,13 +50,13 @@ Covers `flow.md` M1–M5, screens MG-1 through MG-14. The biggest surface area �
 
 **Done when:** a manager can complete the full setup sequence (bus → driver → route → assignment) and see mock buses moving on the live fleet map, on both mobile and web layouts.
 
-## Phase 4: Master Admin flow
+## Phase 4: Master Admin flow — done
 
 Covers `flow.md` A1–A3, screens MA-1 through MA-6. Smallest surface area.
 
-- College list and college form (including geofence fields — UI only, backend has nowhere to save them yet)
-- Manager account creation (UI only — no provisioning RPC yet, `BACKEND_CHANGES.md` #7)
-- Activate / deactivate / archive
+- College list and college form (including geofence fields and fee policies)
+- Manager account creation and provisioning form
+- Activate / deactivate / archive state management and impact confirmation modal
 
 **Done when:** a master admin can create a college and a manager account against mock data, and toggle college status.
 

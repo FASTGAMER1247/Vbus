@@ -20,6 +20,11 @@ import '../features/manager/manager_trip_list_screen.dart';
 import '../features/manager/route_builder_screen.dart';
 import '../features/manager/route_list_screen.dart';
 import '../features/manager/trip_summary_screen.dart';
+import '../features/master_admin/college_detail_screen.dart';
+import '../features/master_admin/college_form_screen.dart';
+import '../features/master_admin/college_list_screen.dart';
+import '../features/master_admin/manager_form_screen.dart';
+import '../features/master_admin/manager_list_screen.dart';
 import '../features/master_admin/master_admin_home_screen.dart';
 import '../features/student/login_screen.dart';
 import '../features/student/student_home_screen.dart';
@@ -88,8 +93,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => TripSummaryScreen(tripId: state.pathParameters['id'] ?? ''),
       ),
 
-      // Master Admin (A1–A3) — stub for now, built next
+      // Master Admin (A1–A3)
       GoRoute(path: '/admin', builder: (context, state) => const MasterAdminHomeScreen()),
+      GoRoute(path: '/admin/colleges', builder: (context, state) => const CollegeListScreen()),
+      GoRoute(path: '/admin/colleges/new', builder: (context, state) => const CollegeFormScreen()),
+      GoRoute(
+        path: '/admin/colleges/:id',
+        builder: (context, state) => CollegeDetailScreen(collegeId: state.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
+        path: '/admin/colleges/:id/edit',
+        builder: (context, state) => CollegeFormScreen(collegeId: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: '/admin/colleges/:id/managers/new',
+        builder: (context, state) => AdminManagerFormScreen(initialCollegeId: state.pathParameters['id']),
+      ),
+      GoRoute(path: '/admin/managers', builder: (context, state) => const AdminManagerListScreen()),
+      GoRoute(path: '/admin/managers/new', builder: (context, state) => const AdminManagerFormScreen()),
     ],
   );
 });

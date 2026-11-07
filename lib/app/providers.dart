@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/models/app_user.dart';
+import '../data/mock/mock_admin_repository.dart';
 import '../data/mock/mock_auth_repository.dart';
 import '../data/mock/mock_driver_repository.dart';
 import '../data/mock/mock_manager_repository.dart';
 import '../data/mock/mock_transport_repository.dart';
+import '../data/repositories/admin_repository.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/driver_repository.dart';
 import '../data/repositories/manager_repository.dart';
@@ -31,6 +33,10 @@ final driverRepositoryProvider = Provider<DriverRepository>((ref) {
 
 final managerRepositoryProvider = Provider<ManagerRepository>((ref) {
   return MockManagerRepository();
+});
+
+final adminRepositoryProvider = Provider<AdminRepository>((ref) {
+  return MockAdminRepository();
 });
 
 /// Current signed-in user. Null = logged out. app/router.dart watches
@@ -64,6 +70,7 @@ class AuthController extends StateNotifier<AppUser?> {
   }
 }
 
-final authControllerProvider = StateNotifierProvider<AuthController, AppUser?>((ref) {
+final authControllerProvider =
+    StateNotifierProvider<AuthController, AppUser?>((ref) {
   return AuthController(ref.watch(authRepositoryProvider));
 });
