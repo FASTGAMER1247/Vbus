@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_typography.dart';
 import '../../core/models/driver_models.dart';
+import '../../core/models/transport_models.dart';
 import '../../core/widgets/trip_stage_badge.dart';
 import 'driver_providers.dart';
 
@@ -18,6 +19,7 @@ class ActiveTripScreen extends ConsumerWidget {
     final flowState = ref.watch(driverFlowProvider);
     final trip = flowState.activeTrip;
     final healthAsync = ref.watch(driverDeviceHealthProvider);
+    final progress = ref.watch(driverRouteProgressProvider);
 
     if (trip == null) {
       return const Scaffold(body: Center(child: Text('No active trip.')));
@@ -32,80 +34,93 @@ class ActiveTripScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${trip.route.name} · Bus ${trip.bus.busNumber}',
-                      style: AppTypography.driverPrimary,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (flowState.isUnassignedTakeover)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.blue.shade200),
-                      ),
-                      child: Text(
-                        'Takeover',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade900,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  TripStageBadge(stage: trip.stage),
-                  const Spacer(),
-                  if (flowState.advisoryDocumentAlert != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.amber.shade300),
-                      ),
-                      child: Row(
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Icon(Icons.warning_amber, size: 14, color: Colors.amber.shade900),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Doc Notice',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber.shade900,
+                          Expanded(
+                            child: Text(
+                              '${trip.route.name} · Bus ${trip.bus.busNumber}',
+                              style: AppTypography.driverPrimary,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (flowState.isUnassignedTakeover)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Text(
+                                'Takeover',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade900,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-                    ),
-                ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          TripStageBadge(stage: trip.stage),
+                          const Spacer(),
+                          if (flowState.advisoryDocumentAlert != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.amber.shade300),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.warning_amber, size: 14, color: Colors.amber.shade900),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Doc Notice',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber.shade900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Next Stop & Route Progress HUD Card
+                      if (progress != null) ...[
+                        _NextStopBanner(progress: progress),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Device health & Telemetry panel
+                      healthAsync.when(
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (e, st) => const Text('Health status unavailable.'),
+                        data: (health) => _HealthPanel(health: health),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 20),
-
-              // Device health & Telemetry panel
-              healthAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, st) => const Text('Health status unavailable.'),
-                data: (health) => _HealthPanel(health: health),
-              ),
-
-              const Spacer(),
-
+              const SizedBox(height: 12),
               FilledButton(
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.statusCritical,
@@ -356,6 +371,133 @@ class _MetricTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             Text(label, style: AppTypography.caption),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NextStopBanner extends StatelessWidget {
+  final RouteProgress progress;
+
+  const _NextStopBanner({required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final nextStop = progress.nextStop;
+    final isDwelling = progress.allStops.firstWhere(
+      (p) => p.stop.id == nextStop.id,
+      orElse: () => progress.allStops.first,
+    ).stage == StopStage.atStop;
+
+    final dist = progress.distanceToNextStopMeters;
+    final distStr = dist > 1000
+        ? '${(dist / 1000).toStringAsFixed(1)} km'
+        : '${dist.toInt()} m';
+
+    final totalStops = progress.totalStopsCount;
+    final completed = progress.completedStopsCount;
+    final progressFraction = totalStops > 1
+        ? (completed / (totalStops - 1)).clamp(0.0, 1.0)
+        : 1.0;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isDwelling ? AppColors.statusGood : AppColors.driverAccent.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      color: isDwelling ? Colors.green.shade50 : Colors.blueGrey.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      isDwelling ? Icons.hail : Icons.navigation,
+                      size: 16,
+                      color: isDwelling ? Colors.green.shade800 : AppColors.driverAccent,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isDwelling ? 'BOARDING NOW' : 'NEXT STOP',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: isDwelling ? Colors.green.shade900 : AppColors.driverAccent,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Text(
+                    'Stop ${completed + 1} of $totalStops',
+                    style: AppTypography.caption.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              nextStop.name,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.lightTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.near_me, size: 14, color: Colors.grey.shade700),
+                const SizedBox(width: 4),
+                Text(
+                  '$distStr away',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(Icons.timer_outlined, size: 14, color: Colors.grey.shade700),
+                const SizedBox(width: 4),
+                Text(
+                  'ETA: ${progress.minutesToNextStop} min',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.driverAccent,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: progressFraction,
+                minHeight: 5,
+                backgroundColor: Colors.grey.shade300,
+                color: isDwelling ? AppColors.statusGood : AppColors.driverAccent,
+              ),
+            ),
           ],
         ),
       ),

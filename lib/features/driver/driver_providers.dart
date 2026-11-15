@@ -142,4 +142,25 @@ final driverDeviceHealthProvider = StreamProvider<DriverDeviceHealth>((ref) {
   return ref.watch(driverRepositoryProvider).watchDeviceHealth();
 });
 
+final driverLiveLocationProvider = StreamProvider<LiveLocation>((ref) {
+  return ref.watch(driverRepositoryProvider).watchDriverLocation();
+});
+
+/// Real-time route progress & upcoming stop calculations for the driver.
+final driverRouteProgressProvider = Provider<RouteProgress?>((ref) {
+  final trip = ref.watch(driverFlowProvider).activeTrip;
+  if (trip == null || trip.route.stops.isEmpty) return null;
+  final locAsync = ref.watch(driverLiveLocationProvider);
+  final loc = locAsync.value ?? trip.lastLocation;
+
+  final lat = loc?.latitude ?? trip.route.stops.first.latitude;
+  final lng = loc?.longitude ?? trip.route.stops.first.longitude;
+
+  return trip.route.calculateProgress(
+    busLat: lat,
+    busLng: lng,
+    speedKmh: loc?.speedKmh,
+  );
+});
+
 final lastCompletedTripProvider = StateProvider<Trip?>((ref) => null);
