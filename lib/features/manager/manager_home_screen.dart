@@ -8,7 +8,7 @@ import '../../app/theme/app_typography.dart';
 import 'manager_providers.dart';
 
 /// flow.md M2 — Manager home & fleet dashboard (Screen MG-1).
-/// Shows summary metrics, quick actions, setup sequence, and recent trips.
+/// Shows summary metrics, compliance watchdog banner, quick actions, setup sequence, and trips.
 class ManagerHomeScreen extends ConsumerWidget {
   const ManagerHomeScreen({super.key});
 
@@ -16,6 +16,7 @@ class ManagerHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider);
     final summaryAsync = ref.watch(fleetSummaryProvider);
+    final alertsAsync = ref.watch(complianceAlertsProvider);
     final busesAsync = ref.watch(busesProvider);
     final driversAsync = ref.watch(driversProvider);
     final routesAsync = ref.watch(routesProvider);
@@ -27,9 +28,11 @@ class ManagerHomeScreen extends ConsumerWidget {
         backgroundColor: AppColors.managerAccent,
         actions: [
           IconButton(
+            tooltip: 'Refresh',
             icon: const Icon(Icons.refresh),
             onPressed: () {
               ref.invalidate(fleetSummaryProvider);
+              ref.invalidate(complianceAlertsProvider);
               ref.invalidate(busesProvider);
               ref.invalidate(driversProvider);
               ref.invalidate(routesProvider);
@@ -38,6 +41,7 @@ class ManagerHomeScreen extends ConsumerWidget {
             },
           ),
           IconButton(
+            tooltip: 'Log out',
             icon: const Icon(Icons.logout),
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),
           ),
@@ -54,12 +58,94 @@ class ManagerHomeScreen extends ConsumerWidget {
               const Text('Overview & Fleet Operations', style: AppTypography.bodySmall),
               const SizedBox(height: 16),
 
+              // Compliance Watchdog Banner (BUS_APP Phase 25)
+              alertsAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (e, _) => const SizedBox.shrink(),
+                data: (alerts) {
+                  final expiredCount = alerts.where((a) => a.isExpired).length;
+                  final expiringSoonCount = alerts.where((a) => a.isExpiringSoon).length;
+
+                  if (expiredCount == 0 && expiringSoonCount == 0) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final isCritical = expiredCount > 0;
+                  final color = isCritical ? AppColors.statusCritical : AppColors.statusWarning;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isCritical ? Colors.red.shade50 : Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isCritical ? Colors.red.shade300 : Colors.amber.shade400,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              isCritical ? Icons.gpp_bad : Icons.warning_amber_rounded,
+                              color: color,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                isCritical
+                                    ? '$expiredCount Document${expiredCount > 1 ? 's' : ''} Expired (Trip Starts Blocked!)'
+                                    : '$expiringSoonCount Document${expiringSoonCount > 1 ? 's' : ''} Expiring Soon (<30 Days)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: isCritical ? Colors.red.shade900 : Colors.amber.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          isCritical
+                              ? 'RC, Insurance, or Driver License expired. Affected drivers or buses are blocked from starting trips.'
+                              : 'Upcoming document expirations require renewal to avoid trip disruptions.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isCritical ? Colors.red.shade800 : Colors.brown.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: isCritical ? Colors.red.shade900 : Colors.amber.shade900,
+                              backgroundColor: Colors.white,
+                            ),
+                            icon: const Icon(Icons.arrow_forward, size: 16),
+                            label: const Text('MANAGE COMPLIANCE', style: TextStyle(fontWeight: FontWeight.bold)),
+                            onPressed: () => context.push('/manager/compliance'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
               // Summary metric cards (flow.md M2)
               summaryAsync.when(
-                loading: () => const Center(child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(),
-                )),
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
                 error: (e, _) => const Text('Could not load fleet metrics.'),
                 data: (summary) => Row(
                   children: [
@@ -129,16 +215,28 @@ class ManagerHomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              // Trips & Reports Section (flow.md M1 Step 5, M4)
+              // Trips & Compliance Section
               const Text('Trips & Operational Reports', style: AppTypography.heading),
               const SizedBox(height: 8),
               Card(
-                child: ListTile(
-                  leading: const Icon(Icons.history, color: AppColors.managerAccent),
-                  title: const Text('Trip List & Summaries'),
-                  subtitle: const Text('View scheduled, active & past trips, or end stuck trips'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/manager/trips'),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.history, color: AppColors.managerAccent),
+                      title: const Text('Trip List & Summaries'),
+                      subtitle: const Text('View scheduled, active & past trips, or end stuck trips'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/manager/trips'),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.verified_user_outlined, color: AppColors.managerAccent),
+                      title: const Text('Fleet & Driver Document Compliance'),
+                      subtitle: const Text('Monitor RC, PUC, insurance, and license expiration statuses'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/manager/compliance'),
+                    ),
+                  ],
                 ),
               ),
             ],

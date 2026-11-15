@@ -1,19 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../core/models/compliance_models.dart';
 import '../../core/models/driver_models.dart';
 import '../../core/models/transport_models.dart';
 import 'permissions_service.dart';
 
-/// flow.md D1–D5 as one state machine. Screens read [driverFlowProvider]
-/// and call methods on the notifier rather than talking to
-/// DriverRepository directly — same "screens depend on the provider
-/// layer, not the repository" pattern as student_providers.dart.
+/// flow.md D1–D5 state machine with unassigned driver takeover and document compliance.
 class DriverFlowState {
   final bool permissionsGranted;
   final Trip? scheduledTrip;
   final Trip? activeTrip;
   final DriverBlockReason? blockReason;
+  final DocumentAlert? blockedDocumentAlert;
+  final DocumentAlert? advisoryDocumentAlert;
+  final bool isUnassignedTakeover;
   final bool isLoading;
 
   const DriverFlowState({
@@ -21,6 +22,9 @@ class DriverFlowState {
     this.scheduledTrip,
     this.activeTrip,
     this.blockReason,
+    this.blockedDocumentAlert,
+    this.advisoryDocumentAlert,
+    this.isUnassignedTakeover = false,
     this.isLoading = false,
   });
 
@@ -29,7 +33,11 @@ class DriverFlowState {
     Trip? scheduledTrip,
     Trip? activeTrip,
     DriverBlockReason? blockReason,
+    DocumentAlert? blockedDocumentAlert,
+    DocumentAlert? advisoryDocumentAlert,
+    bool? isUnassignedTakeover,
     bool clearBlockReason = false,
+    bool clearAdvisory = false,
     bool? isLoading,
   }) {
     return DriverFlowState(
@@ -37,6 +45,9 @@ class DriverFlowState {
       scheduledTrip: scheduledTrip ?? this.scheduledTrip,
       activeTrip: activeTrip ?? this.activeTrip,
       blockReason: clearBlockReason ? null : (blockReason ?? this.blockReason),
+      blockedDocumentAlert: clearBlockReason ? null : (blockedDocumentAlert ?? this.blockedDocumentAlert),
+      advisoryDocumentAlert: clearAdvisory ? null : (advisoryDocumentAlert ?? this.advisoryDocumentAlert),
+      isUnassignedTakeover: isUnassignedTakeover ?? this.isUnassignedTakeover,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -51,14 +62,13 @@ class DriverFlowController extends StateNotifier<DriverFlowState> {
 
   Future<void> _loadScheduledTrip() async {
     final repo = _ref.read(driverRepositoryProvider);
-    // driverId is hardcoded to the mock demo driver for now — will
-    // come from authControllerProvider's user once every role has a
-    // real id flowing through, same as student_providers.dart does.
-    final trip = await repo.getTodayScheduledTrip('driver-1');
+    final user = _ref.read(authControllerProvider);
+    final driverId = user?.id ?? 'driver-1';
+    final trip = await repo.getTodayScheduledTrip(driverId);
     state = state.copyWith(scheduledTrip: trip);
   }
 
-  /// flow.md D1: "First trip: location permissions granted?"
+  /// flow.md D1: Location permissions check & request
   Future<bool> requestPermissions() async {
     state = state.copyWith(isLoading: true);
     final granted = await PermissionsService.requestLocationPermissions();
@@ -66,20 +76,38 @@ class DriverFlowController extends StateNotifier<DriverFlowState> {
     return granted;
   }
 
-  /// D1 → identify the bus (QR or manual). Returns true on success;
-  /// on failure, state.blockReason is set for D5.
-  Future<bool> identifyBus(String busIdOrCode) async {
-    state = state.copyWith(isLoading: true, clearBlockReason: true);
+  /// D1 -> identify the bus (QR or manual ID).
+  /// Returns [DriverScanResult] on success; on failure throws or sets blockReason.
+  Future<DriverScanResult?> identifyBus(String busIdOrCode) async {
+    state = state.copyWith(
+      isLoading: true,
+      clearBlockReason: true,
+      clearAdvisory: true,
+    );
+
+    final user = _ref.read(authControllerProvider);
+    final driverId = user?.id ?? 'driver-1';
+
     try {
-      final trip = await _ref.read(driverRepositoryProvider).identifyBus(
-            driverId: 'driver-1',
+      final result = await _ref.read(driverRepositoryProvider).identifyBus(
+            driverId: driverId,
             busIdOrCode: busIdOrCode,
           );
-      state = state.copyWith(scheduledTrip: trip, isLoading: false);
-      return true;
+
+      state = state.copyWith(
+        scheduledTrip: result.trip,
+        isUnassignedTakeover: result.isUnassignedTakeover,
+        advisoryDocumentAlert: result.advisoryAlert,
+        isLoading: false,
+      );
+      return result;
     } on DriverBlockedException catch (e) {
-      state = state.copyWith(blockReason: e.reason, isLoading: false);
-      return false;
+      state = state.copyWith(
+        blockReason: e.reason,
+        blockedDocumentAlert: e.documentAlert,
+        isLoading: false,
+      );
+      return null;
     }
   }
 
@@ -91,33 +119,27 @@ class DriverFlowController extends StateNotifier<DriverFlowState> {
     state = state.copyWith(activeTrip: trip, isLoading: false);
   }
 
-  /// flow.md D4 Path B — the driver's manual end button. The ended
-  /// trip is also pushed into [lastCompletedTripProvider] so DR-9 can
-  /// show a summary after state resets back to idle.
+  /// flow.md D4 Path B - driver's manual end trip.
   Future<Trip> endTripManually({required bool insideGeofence}) async {
     final trip = state.activeTrip;
     state = state.copyWith(isLoading: true);
     final ended = await _ref.read(driverRepositoryProvider).endTripManually(
-          trip!.id,
+          trip?.id ?? '',
           insideGeofence: insideGeofence,
         );
+    state = state.copyWith(activeTrip: null, isLoading: false);
     _ref.read(lastCompletedTripProvider.notifier).state = ended;
-    state = const DriverFlowState(); // back to idle — D4 ends at "Driver home"
     return ended;
   }
-
-  void clearBlock() => state = state.copyWith(clearBlockReason: true);
 }
 
-final driverFlowProvider = StateNotifierProvider<DriverFlowController, DriverFlowState>((ref) {
+final driverFlowProvider =
+    StateNotifierProvider<DriverFlowController, DriverFlowState>((ref) {
   return DriverFlowController(ref);
 });
 
-/// flow.md D2/D5 — streamed GPS/network/battery status.
 final driverDeviceHealthProvider = StreamProvider<DriverDeviceHealth>((ref) {
   return ref.watch(driverRepositoryProvider).watchDeviceHealth();
 });
 
-/// Holds the just-ended trip so DR-9 (trip completed summary) has
-/// something to show after driverFlowProvider resets to idle.
 final lastCompletedTripProvider = StateProvider<Trip?>((ref) => null);

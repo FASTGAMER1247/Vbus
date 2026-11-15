@@ -1,17 +1,21 @@
 import '../../core/models/app_user.dart';
+import '../../core/models/compliance_models.dart';
 import '../../core/models/role.dart';
 import '../../core/models/transport_models.dart';
 import '../../core/models/trip_stage.dart';
 
-/// Fake data standing in for the ERP + backend until they're wired up
-/// (prd.md §15.4 / BACKEND_CHANGES.md). Coordinates are a straight
-/// line near VJIT, Hyderabad — close enough for demo purposes, not
-/// meant to be an accurate real-world route.
+/// Fake data standing in for the ERP + backend until they're wired up.
+/// Coordinates are near VJIT, Hyderabad.
 class MockSeed {
   MockSeed._();
 
   static const collegeId = 'college-vjit';
   static const collegeName = 'VJIT';
+
+  // Campus coordinates (VJIT Hyderabad)
+  static const campusLatitude = 17.3605;
+  static const campusLongitude = 78.3615;
+  static const campusRadiusMeters = 300.0;
 
   static final stops = <Stop>[
     const Stop(id: 'stop-1', name: 'Ameerpet', latitude: 17.4374, longitude: 78.4487, order: 1, expectedTime: '7:15 AM'),
@@ -31,6 +35,7 @@ class MockSeed {
   static const bus023 = Bus(id: 'bus-023', busNumber: '023', registrationNumber: 'TS 09 AB 1234', capacity: 42);
   static const bus015 = Bus(id: 'bus-015', busNumber: '015', registrationNumber: 'TS 09 CD 5678', capacity: 50);
   static const bus042 = Bus(id: 'bus-042', busNumber: '042', registrationNumber: 'TS 09 EF 9012', capacity: 36);
+  static const bus009 = Bus(id: 'bus-009', busNumber: '009', registrationNumber: 'TS 09 GH 3456', capacity: 40);
 
   static const driverRamesh = DriverProfile(id: 'driver-1', name: 'Ramesh K', phone: '+91 90000 00001');
   static const driverSuresh = DriverProfile(id: 'driver-2', name: 'Suresh V', phone: '+91 90000 00002');
@@ -50,9 +55,52 @@ class MockSeed {
     expectedDuration: const Duration(hours: 1, minutes: 40),
   );
 
-  static final initialBuses = <Bus>[bus023, bus015, bus042];
+  static final initialBuses = <Bus>[bus023, bus015, bus042, bus009];
   static final initialDrivers = <DriverProfile>[driverRamesh, driverSuresh, driverAnand];
   static final initialRoutes = <TransportRoute>[route7, route12];
+
+  // Document compliance alerts (BUS_APP Phase 25)
+  static final initialComplianceAlerts = <DocumentAlert>[
+    DocumentAlert(
+      id: 'alert-1',
+      collegeId: collegeId,
+      entityType: 'bus',
+      entityId: 'bus-042',
+      entityName: 'Bus 042 (TS 09 EF 9012)',
+      documentType: DocumentType.insurancePolicy,
+      documentNumber: 'POL-COMM-992182',
+      expiryDate: DateTime.now().subtract(const Duration(days: 12)),
+      severity: ComplianceSeverity.expired,
+      daysUntilExpiry: -12,
+      blocksTrip: true,
+    ),
+    DocumentAlert(
+      id: 'alert-2',
+      collegeId: collegeId,
+      entityType: 'bus',
+      entityId: 'bus-009',
+      entityName: 'Bus 009 (TS 09 GH 3456)',
+      documentType: DocumentType.pucCertificate,
+      documentNumber: 'PUC-TS-2026-8812',
+      expiryDate: DateTime.now().add(const Duration(days: 5)),
+      severity: ComplianceSeverity.expiringSoon,
+      daysUntilExpiry: 5,
+      blocksTrip: false, // advisory only
+    ),
+    DocumentAlert(
+      id: 'alert-3',
+      collegeId: collegeId,
+      entityType: 'driver',
+      entityId: 'driver-2',
+      entityName: 'Suresh V (Driver)',
+      documentType: DocumentType.drivingLicense,
+      documentNumber: 'DL-09-201800192',
+      expiryDate: DateTime.now().subtract(const Duration(days: 3)),
+      severity: ComplianceSeverity.expired,
+      daysUntilExpiry: -3,
+      blocksTrip: true,
+    ),
+  ];
 
   // ---- Demo accounts, one per role ----
   static const studentUser = AppUser(
@@ -114,10 +162,6 @@ class MockSeed {
         ),
       );
 
-  /// flow.md D1: the driver flow starts from a trip that already
-  /// exists as `scheduled` (see BACKEND_CHANGES.md #5 — nothing
-  /// creates this automatically yet, a manager has to). This is that
-  /// trip, for the driver demo account.
   static Trip todayScheduledTrip() => Trip(
         id: 'trip-scheduled-1',
         route: route7,
@@ -126,13 +170,28 @@ class MockSeed {
         stage: TripStage.scheduled,
       );
 
-  /// Demo Bus IDs for exercising every D5 blocked-start reason without
-  /// needing real backend data. '023' is the only one that succeeds.
+  static Trip scheduledTripForBus(Bus bus) => Trip(
+        id: 'trip-scheduled-${bus.busNumber}',
+        route: route7,
+        bus: bus,
+        driver: driverRamesh,
+        stage: TripStage.scheduled,
+      );
+
+  /// Demo Bus outcomes & QR code mapping
   static const demoBusOutcomes = <String, String>{
     '023': 'ok',
+    'CAMPUS_TRANSIT:BUS:VJIT:023': 'ok',
+    '015': 'unassigned_takeover',
+    'CAMPUS_TRANSIT:BUS:VJIT:015': 'unassigned_takeover',
+    '009': 'puc_expiring_soon',
+    'CAMPUS_TRANSIT:BUS:VJIT:009': 'puc_expiring_soon',
+    '042': 'insurance_expired',
+    'CAMPUS_TRANSIT:BUS:VJIT:042': 'insurance_expired',
     '999': 'not_found',
     '011': 'another_college',
+    'CAMPUS_TRANSIT:BUS:CBIT:011': 'another_college',
     '007': 'not_assigned',
-    '023-busy': 'already_active', // typed as-is to demo this branch
+    '023-busy': 'already_active',
   };
 }

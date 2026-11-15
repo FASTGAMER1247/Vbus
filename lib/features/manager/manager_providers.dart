@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../core/models/compliance_models.dart';
 import '../../core/models/manager_models.dart';
 import '../../core/models/transport_models.dart';
 
@@ -56,4 +57,11 @@ final liveFleetLocationsProvider = StreamProvider.autoDispose<List<FleetBusLocat
   final user = ref.watch(authControllerProvider);
   final collegeId = user?.collegeId ?? 'college-vjit';
   return ref.watch(managerRepositoryProvider).watchFleetLocations(collegeId);
+});
+
+/// Document compliance and expiry alerts (BUS_APP Phase 25).
+final complianceAlertsProvider = FutureProvider.autoDispose<List<DocumentAlert>>((ref) {
+  final user = ref.watch(authControllerProvider);
+  final collegeId = user?.collegeId ?? 'college-vjit';
+  return ref.watch(managerRepositoryProvider).getComplianceAlerts(collegeId);
 });

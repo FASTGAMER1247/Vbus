@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import '../../core/models/compliance_models.dart';
 import '../../core/models/driver_models.dart';
 import '../../core/models/manager_models.dart';
 import '../../core/models/transport_models.dart';
@@ -13,6 +14,8 @@ class MockManagerRepository implements ManagerRepository {
   final List<Bus> _buses = List.of(MockSeed.initialBuses);
   final List<DriverProfile> _drivers = List.of(MockSeed.initialDrivers);
   final List<TransportRoute> _routes = List.of(MockSeed.initialRoutes);
+  final List<DocumentAlert> _alerts = List.of(MockSeed.initialComplianceAlerts);
+
   final List<FleetAssignment> _assignments = [
     FleetAssignment(
       id: 'assign-1',
@@ -61,8 +64,8 @@ class MockManagerRepository implements ManagerRepository {
     final activeBusIds = _trips.where((t) => t.stage.isActive).map((t) => t.bus.id).toSet();
     final activeBuses = activeBusIds.length;
     final inactiveBuses = max(0, _buses.length - activeBuses);
-    // Simulate 1 offline bus if any active
     final offlineBuses = activeBuses > 1 ? 1 : 0;
+    final complianceWarnings = _alerts.where((a) => a.isExpired || a.isExpiringSoon).length;
 
     return FleetSummary(
       activeBuses: activeBuses,
@@ -70,6 +73,7 @@ class MockManagerRepository implements ManagerRepository {
       activeTrips: activeTrips,
       completedTrips: completedTrips,
       offlineBuses: offlineBuses,
+      complianceWarningsCount: complianceWarnings,
     );
   }
 
@@ -151,7 +155,7 @@ class MockManagerRepository implements ManagerRepository {
     _assignments.removeWhere((a) => a.routeId == routeId);
   }
 
-  // --- Assignments CRUD (M1 Step 4) ---
+  // --- Assignments (M1 Step 4) ---
   @override
   Future<List<FleetAssignment>> getAssignments(String collegeId) async {
     await Future.delayed(const Duration(milliseconds: 150));
@@ -161,9 +165,12 @@ class MockManagerRepository implements ManagerRepository {
   @override
   Future<FleetAssignment> saveAssignment(FleetAssignment assignment) async {
     await Future.delayed(const Duration(milliseconds: 200));
-    // Rule: only one assignment per bus
-    _assignments.removeWhere((a) => a.busId == assignment.busId);
-    _assignments.add(assignment);
+    final idx = _assignments.indexWhere((a) => a.id == assignment.id);
+    if (idx >= 0) {
+      _assignments[idx] = assignment;
+    } else {
+      _assignments.add(assignment);
+    }
     return assignment;
   }
 
@@ -173,7 +180,7 @@ class MockManagerRepository implements ManagerRepository {
     _assignments.removeWhere((a) => a.id == assignmentId);
   }
 
-  // --- Trips & Reports (M1 Step 5, M4, M5) ---
+  // --- Trip Management (M1 Step 5, M4, M5) ---
   @override
   Future<List<Trip>> getTrips(String collegeId) async {
     await Future.delayed(const Duration(milliseconds: 150));
@@ -182,96 +189,89 @@ class MockManagerRepository implements ManagerRepository {
 
   @override
   Future<Trip?> getTripById(String tripId) async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    try {
-      return _trips.firstWhere((t) => t.id == tripId);
-    } catch (_) {
-      return null;
-    }
+    await Future.delayed(const Duration(milliseconds: 100));
+    return _trips.where((t) => t.id == tripId).firstOrNull;
   }
 
   @override
   Future<Trip> createScheduledTrip(CreateTripParams params) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final bus = _buses.firstWhere((b) => b.id == params.busId);
-    final driver = _drivers.firstWhere((d) => d.id == params.driverId);
-    final route = _routes.firstWhere((r) => r.id == params.routeId);
+    await Future.delayed(const Duration(milliseconds: 250));
+    final bus = _buses.firstWhere((b) => b.id == params.busId, orElse: () => MockSeed.bus023);
+    final driver = _drivers.firstWhere((d) => d.id == params.driverId, orElse: () => MockSeed.driverRamesh);
+    final route = _routes.firstWhere((r) => r.id == params.routeId, orElse: () => MockSeed.route7);
 
     final trip = Trip(
-      id: 'trip-sched-${DateTime.now().millisecondsSinceEpoch}',
+      id: 'trip-scheduled-${DateTime.now().millisecondsSinceEpoch}',
       route: route,
       bus: bus,
       driver: driver,
       stage: TripStage.scheduled,
+      startedAt: null,
     );
-    _trips.insert(0, trip);
+
+    _trips.add(trip);
     return trip;
   }
 
   @override
   Future<void> endStuckTrip({required String tripId, required String managerId}) async {
-    await Future.delayed(const Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 300));
     final idx = _trips.indexWhere((t) => t.id == tripId);
     if (idx >= 0) {
-      final trip = _trips[idx];
-      _trips[idx] = trip.copyWith(
+      _trips[idx] = _trips[idx].copyWith(
         stage: TripStage.endedManuallyByManager,
         completedAt: DateTime.now(),
       );
     }
   }
 
-  // --- Live Fleet Monitoring (M2, M3) ---
+  @override
+  Future<List<DocumentAlert>> getComplianceAlerts(String collegeId) async {
+    await Future.delayed(const Duration(milliseconds: 120));
+    return List.unmodifiable(_alerts);
+  }
+
+  // --- Live Fleet Telemetry Stream (M2, M3) ---
   @override
   Stream<List<FleetBusLocation>> watchFleetLocations(String collegeId) async* {
     var step = 0;
     while (true) {
       final list = <FleetBusLocation>[];
 
-      for (final bus in _buses) {
-        final assignment = _assignments.cast<FleetAssignment?>().firstWhere(
-              (a) => a?.busId == bus.id,
-              orElse: () => null,
-            );
-        final driver = assignment != null
-            ? _drivers.cast<DriverProfile?>().firstWhere(
-                  (d) => d?.id == assignment.driverId,
-                  orElse: () => null,
-                )
-            : null;
-        final route = assignment != null
-            ? _routes.cast<TransportRoute?>().firstWhere(
-                  (r) => r?.id == assignment.routeId,
-                  orElse: () => null,
-                )
-            : null;
+      for (var i = 0; i < _buses.length; i++) {
+        final bus = _buses[i];
+        final assign = _assignments.where((a) => a.busId == bus.id).firstOrNull;
+        final driver = assign != null ? _drivers.where((d) => d.id == assign.driverId).firstOrNull : null;
+        final route = assign != null ? _routes.where((r) => r.id == assign.routeId).firstOrNull : null;
+        final activeTrip = _trips.where((t) => t.bus.id == bus.id && t.stage.isActive).firstOrNull;
 
-        final activeTrip = _trips.cast<Trip?>().firstWhere(
-              (t) => t != null && t.bus.id == bus.id && t.stage.isActive,
-              orElse: () => null,
-            );
+        final busAlerts = _alerts.where((a) => a.entityId == bus.id).toList();
 
-        if (activeTrip != null && route != null && route.stops.isNotEmpty) {
-          final stops = route.stops;
-          final int idx = (step ~/ 5) % max<int>(1, stops.length - 1);
-          final int nextIdx = (idx + 1) % stops.length;
-          final t = (step % 5) / 5.0;
+        if (activeTrip != null) {
+          final stops = activeTrip.route.stops;
+          final stopIdx = (step + i) % stops.length;
+          final nextStopIdx = (stopIdx + 1) % stops.length;
+          final s1 = stops[stopIdx];
+          final s2 = stops[nextStopIdx];
 
-          final lat = stops[idx].latitude + (stops[nextIdx].latitude - stops[idx].latitude) * t;
-          final lng = stops[idx].longitude + (stops[nextIdx].longitude - stops[idx].longitude) * t;
+          final frac = ((step % 10) / 10.0);
+          final lat = s1.latitude + (s2.latitude - s1.latitude) * frac;
+          final lng = s1.longitude + (s2.longitude - s1.longitude) * frac;
+
+          final isOffline = (step + i) % 7 == 0;
 
           final loc = LiveLocation(
             latitude: lat,
             longitude: lng,
-            speedKmh: 32 + (step % 4) * 3.0,
-            headingDegrees: 45,
-            updatedAt: DateTime.now(),
+            speedKmh: isOffline ? 0 : 32.0,
+            headingDegrees: 45.0,
+            updatedAt: isOffline ? DateTime.now().subtract(const Duration(seconds: 75)) : DateTime.now(),
           );
 
           final health = DriverDeviceHealth(
-            gps: GpsStatus.active,
-            network: NetworkStatus.online,
-            batteryPercent: max<int>(20, 88 - (step ~/ 2)),
+            gps: isOffline ? GpsStatus.weak : GpsStatus.active,
+            network: isOffline ? NetworkStatus.offline : NetworkStatus.online,
+            batteryPercent: max(15, 85 - (step % 20)),
             lastSyncAt: DateTime.now(),
           );
 
@@ -282,6 +282,7 @@ class MockManagerRepository implements ManagerRepository {
             activeTrip: activeTrip,
             location: loc,
             health: health,
+            alerts: busAlerts,
           ));
         } else {
           list.add(FleetBusLocation(
@@ -291,6 +292,7 @@ class MockManagerRepository implements ManagerRepository {
             activeTrip: null,
             location: null,
             health: null,
+            alerts: busAlerts,
           ));
         }
       }

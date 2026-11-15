@@ -1,11 +1,8 @@
+import '../../core/models/compliance_models.dart';
 import '../../core/models/manager_models.dart';
 import '../../core/models/transport_models.dart';
 
 /// Abstract contract for Manager operations (flow.md M1–M5, prd.md Modules 4–7, 11, 13).
-///
-/// In Phase 3, this is implemented by [MockManagerRepository]. In Phase 6,
-/// it will be implemented by [RemoteManagerRepository] backed by Supabase RPCs
-/// (`get_fleet_status`, `generate_daily_trips`, `get_trip_summary`, etc.).
 abstract class ManagerRepository {
   /// Dashboard metrics (M2).
   Future<FleetSummary> getFleetSummary(String collegeId);
@@ -38,4 +35,7 @@ abstract class ManagerRepository {
 
   /// Live fleet monitoring stream (M2, M3).
   Stream<List<FleetBusLocation>> watchFleetLocations(String collegeId);
+
+  /// Fleet & Driver Compliance and document expiry alerts (BUS_APP Phase 25).
+  Future<List<DocumentAlert>> getComplianceAlerts(String collegeId);
 }

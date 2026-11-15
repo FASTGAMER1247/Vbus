@@ -1,3 +1,4 @@
+import 'compliance_models.dart';
 import 'driver_models.dart';
 import 'transport_models.dart';
 
@@ -8,6 +9,7 @@ class FleetSummary {
   final int activeTrips;
   final int completedTrips;
   final int offlineBuses;
+  final int complianceWarningsCount;
 
   const FleetSummary({
     required this.activeBuses,
@@ -15,6 +17,7 @@ class FleetSummary {
     required this.activeTrips,
     required this.completedTrips,
     required this.offlineBuses,
+    this.complianceWarningsCount = 0,
   });
 
   int get totalBuses => activeBuses + inactiveBuses;
@@ -65,6 +68,7 @@ class FleetBusLocation {
   final Trip? activeTrip;
   final LiveLocation? location;
   final DriverDeviceHealth? health;
+  final List<DocumentAlert> alerts;
 
   const FleetBusLocation({
     required this.bus,
@@ -73,10 +77,12 @@ class FleetBusLocation {
     this.activeTrip,
     this.location,
     this.health,
+    this.alerts = const [],
   });
 
   bool get isTrackingActive => activeTrip != null && location != null && !location!.isStale();
   bool get isOffline => health?.network == NetworkStatus.offline || (location != null && location!.isStale());
+  bool get hasComplianceIssue => alerts.any((a) => a.isExpired);
 }
 
 /// Parameters to manually schedule a trip for today (flow.md M1 Step 5).

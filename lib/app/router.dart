@@ -11,6 +11,7 @@ import '../features/driver/trip_confirmation_screen.dart';
 import '../features/manager/assignment_screen.dart';
 import '../features/manager/bus_form_screen.dart';
 import '../features/manager/bus_list_screen.dart';
+import '../features/manager/compliance_alerts_screen.dart';
 import '../features/manager/create_trip_screen.dart';
 import '../features/manager/driver_form_screen.dart';
 import '../features/manager/driver_list_screen.dart';
@@ -32,10 +33,7 @@ import '../features/student/student_live_map_screen.dart';
 import '../features/student/student_route_screen.dart';
 import 'providers.dart';
 
-/// flow.md C1 (login gate) + C2 (role routing) in one place. Each
-/// role's screens only ever live under their own path prefix — a
-/// student can never navigate into /manager/*, even by typing the URL
-/// on web, because the redirect below catches it on every navigation.
+/// flow.md C1 (login gate) + C2 (role routing) in one place.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final user = ref.watch(authControllerProvider);
 
@@ -49,7 +47,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (loggingIn) {
-        return user.role.homeRoute; // C2: send to the role's home
+        return user.role.homeRoute;
       }
 
       final allowedPrefix = _prefixFor(user.role);
@@ -67,8 +65,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/student/live', builder: (context, state) => const StudentLiveMapScreen()),
       GoRoute(path: '/student/route', builder: (context, state) => const StudentRouteScreen()),
 
-      // Driver (D1–D5) — built out; D1 permission gate lives in
-      // DriverHomeScreen.build, before pushing to /driver/identify
+      // Driver (D1–D5)
       GoRoute(path: '/driver', builder: (context, state) => const DriverHomeScreen()),
       GoRoute(path: '/driver/permissions', builder: (context, state) => const PermissionOnboardingScreen()),
       GoRoute(path: '/driver/identify', builder: (context, state) => const IdentifyBusScreen()),
@@ -79,6 +76,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Manager (M1–M5)
       GoRoute(path: '/manager', builder: (context, state) => const ManagerHomeScreen()),
       GoRoute(path: '/manager/fleet', builder: (context, state) => const ManagerLiveFleetScreen()),
+      GoRoute(path: '/manager/compliance', builder: (context, state) => const ComplianceAlertsScreen()),
       GoRoute(path: '/manager/buses', builder: (context, state) => const BusListScreen()),
       GoRoute(path: '/manager/buses/new', builder: (context, state) => const BusFormScreen()),
       GoRoute(path: '/manager/drivers', builder: (context, state) => const DriverListScreen()),
