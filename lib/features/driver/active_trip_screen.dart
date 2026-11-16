@@ -7,6 +7,7 @@ import '../../app/theme/app_typography.dart';
 import '../../core/models/driver_models.dart';
 import '../../core/models/transport_models.dart';
 import '../../core/widgets/trip_stage_badge.dart';
+import 'driver_gps_service.dart';
 import 'driver_providers.dart';
 
 /// flow.md D2 (During a trip) + D3 (Offline) + D4 Path B (manual end, DR-8 confirmation).
@@ -20,9 +21,16 @@ class ActiveTripScreen extends ConsumerWidget {
     final trip = flowState.activeTrip;
     final healthAsync = ref.watch(driverDeviceHealthProvider);
     final progress = ref.watch(driverRouteProgressProvider);
+    final gpsState = ref.watch(driverGpsTrackingProvider);
 
     if (trip == null) {
       return const Scaffold(body: Center(child: Text('No active trip.')));
+    }
+
+    if (!gpsState.isTracking) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(driverGpsTrackingProvider.notifier).startTracking(trip: trip);
+      });
     }
 
     return Scaffold(
@@ -110,6 +118,10 @@ class ActiveTripScreen extends ConsumerWidget {
                         const SizedBox(height: 16),
                       ],
 
+                      // Supabase Realtime Telemetry Broadcast Panel
+                      _TelemetryBroadcastPanel(trip: trip),
+                      const SizedBox(height: 16),
+
                       // Device health & Telemetry panel
                       healthAsync.when(
                         loading: () => const Center(child: CircularProgressIndicator()),
@@ -191,6 +203,93 @@ class ActiveTripScreen extends ConsumerWidget {
 
     await ref.read(driverFlowProvider.notifier).endTripManually(insideGeofence: insideGeofence);
     if (context.mounted) context.go('/driver/completed');
+  }
+}
+
+class _TelemetryBroadcastPanel extends ConsumerWidget {
+  final Trip trip;
+  const _TelemetryBroadcastPanel({required this.trip});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gpsState = ref.watch(driverGpsTrackingProvider);
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: gpsState.isTracking ? AppColors.statusGood : Colors.grey,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Supabase Realtime GPS Telemetry',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.green.shade300),
+                  ),
+                  child: Text(
+                    '${gpsState.packetsSent} pings',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  gpsState.isSimulating ? 'Virtual Route Simulation' : 'Live Phone GPS (Geolocator)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: gpsState.isSimulating ? Colors.blue.shade900 : Colors.teal.shade900,
+                  ),
+                ),
+                Transform.scale(
+                  scale: 0.8,
+                  child: Switch(
+                    value: gpsState.isSimulating,
+                    activeTrackColor: AppColors.driverAccent,
+                    onChanged: (val) {
+                      ref.read(driverGpsTrackingProvider.notifier).setSimulationMode(val, trip);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              gpsState.isSimulating
+                  ? 'Auto-advancing along route stops. Turn off switch to stream real phone GPS.'
+                  : 'Streaming real device GPS. Switch on to simulate movement without driving.',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

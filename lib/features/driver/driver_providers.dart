@@ -4,6 +4,7 @@ import '../../app/providers.dart';
 import '../../core/models/compliance_models.dart';
 import '../../core/models/driver_models.dart';
 import '../../core/models/transport_models.dart';
+import 'driver_gps_service.dart';
 import 'permissions_service.dart';
 
 /// flow.md D1–D5 state machine with unassigned driver takeover and document compliance.
@@ -117,12 +118,14 @@ class DriverFlowController extends StateNotifier<DriverFlowState> {
     state = state.copyWith(isLoading: true);
     final trip = await _ref.read(driverRepositoryProvider).startTrip(scheduled.id);
     state = state.copyWith(activeTrip: trip, isLoading: false);
+    _ref.read(driverGpsTrackingProvider.notifier).startTracking(trip: trip);
   }
 
   /// flow.md D4 Path B - driver's manual end trip.
   Future<Trip> endTripManually({required bool insideGeofence}) async {
     final trip = state.activeTrip;
     state = state.copyWith(isLoading: true);
+    _ref.read(driverGpsTrackingProvider.notifier).stopTracking();
     final ended = await _ref.read(driverRepositoryProvider).endTripManually(
           trip?.id ?? '',
           insideGeofence: insideGeofence,

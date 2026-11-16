@@ -146,6 +146,9 @@ class RemoteTransportRepository implements TransportRepository {
 
     controller = StreamController<LiveLocation>.broadcast(
       onListen: () {
+        // Fetch current cached location immediately so UI doesn't wait for next tick
+        _fetchInitialBusLocation(tripId, controller);
+
         channel = _client.channel('live_bus_locations_$tripId')
           ..onPostgresChanges(
             event: sb.PostgresChangeEvent.all,
@@ -178,6 +181,30 @@ class RemoteTransportRepository implements TransportRepository {
     );
 
     return controller.stream;
+  }
+
+  Future<void> _fetchInitialBusLocation(String tripId, StreamController<LiveLocation> controller) async {
+    try {
+      final record = await _client
+          .from('bus_live_locations')
+          .select('latitude, longitude, speed, heading, updated_at')
+          .eq('trip_id', tripId)
+          .maybeSingle();
+
+      if (record != null && !controller.isClosed) {
+        final lat = (record['latitude'] as num?)?.toDouble();
+        final lng = (record['longitude'] as num?)?.toDouble();
+        if (lat != null && lng != null) {
+          controller.add(LiveLocation(
+            latitude: lat,
+            longitude: lng,
+            speedKmh: (record['speed'] as num?)?.toDouble(),
+            headingDegrees: (record['heading'] as num?)?.toDouble(),
+            updatedAt: DateTime.tryParse(record['updated_at'] as String? ?? '') ?? DateTime.now(),
+          ));
+        }
+      }
+    } catch (_) {}
   }
 
   TransportRoute _mapRoute(Map<String, dynamic> routeMap) {

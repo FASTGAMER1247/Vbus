@@ -176,6 +176,19 @@ class MockDriverRepository implements DriverRepository {
   @override
   Stream<LiveLocation> watchDriverLocation() => _locationController.stream;
 
+  @override
+  Future<void> recordTelemetry({
+    required String tripId,
+    required LiveLocation location,
+    int? batteryPercent,
+    String? networkStatus,
+  }) async {
+    _locationController.add(location);
+    if (_currentTrip != null) {
+      _currentTrip = _currentTrip!.copyWith(lastLocation: location);
+    }
+  }
+
   double _calculateHaversineDistance(
     double lat1,
     double lon1,

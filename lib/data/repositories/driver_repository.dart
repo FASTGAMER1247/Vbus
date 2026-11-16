@@ -26,4 +26,12 @@ abstract class DriverRepository {
 
   /// Stream of the driver's live GPS coordinates.
   Stream<LiveLocation> watchDriverLocation();
+
+  /// Records phone GPS telemetry and broadcasts to Supabase Realtime (bus_live_locations).
+  Future<void> recordTelemetry({
+    required String tripId,
+    required LiveLocation location,
+    int? batteryPercent,
+    String? networkStatus,
+  });
 }

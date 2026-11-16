@@ -201,6 +201,59 @@ class RemoteDriverRepository implements DriverRepository {
   @override
   Stream<LiveLocation> watchDriverLocation() => _locationController.stream;
 
+  @override
+  Future<void> recordTelemetry({
+    required String tripId,
+    required LiveLocation location,
+    int? batteryPercent,
+    String? networkStatus,
+  }) async {
+    _locationController.add(location);
+    final now = location.updatedAt;
+
+    _healthController.add(DriverDeviceHealth(
+      gps: GpsStatus.active,
+      network: networkStatus == 'offline' ? NetworkStatus.offline : NetworkStatus.online,
+      batteryPercent: batteryPercent ?? 85,
+      lastSyncAt: now,
+      currentSpeedKmh: location.speedKmh,
+      currentHeading: location.headingDegrees,
+    ));
+
+    // Resolve active tracking session if not already cached
+    if (_currentTrackingSessionId == null) {
+      try {
+        final sess = await _client
+            .from('tracking_sessions')
+            .select('id')
+            .eq('trip_id', tripId)
+            .eq('status', 'active')
+            .maybeSingle();
+        if (sess != null) {
+          _currentTrackingSessionId = sess['id'] as String;
+        }
+      } catch (_) {}
+    }
+
+    if (_currentTrackingSessionId != null) {
+      try {
+        await _client.rpc('record_tracking_location', params: {
+          'p_tracking_session_id': _currentTrackingSessionId,
+          'p_latitude': location.latitude,
+          'p_longitude': location.longitude,
+          'p_speed': location.speedKmh,
+          'p_heading': location.headingDegrees,
+          'p_accuracy': 5.0,
+          'p_altitude': 0.0,
+          'p_recorded_at': now.toIso8601String(),
+          'p_source': 'driver_phone',
+          'p_battery_percentage': batteryPercent ?? 85,
+          'p_network_status': networkStatus ?? 'online',
+        });
+      } catch (_) {}
+    }
+  }
+
   Future<void> recordGpsPoint({
     required double latitude,
     required double longitude,
@@ -210,39 +263,18 @@ class RemoteDriverRepository implements DriverRepository {
     String? networkStatus,
   }) async {
     final now = DateTime.now();
-    final liveLoc = LiveLocation(
-      latitude: latitude,
-      longitude: longitude,
-      speedKmh: speedKmh,
-      headingDegrees: heading,
-      updatedAt: now,
+    await recordTelemetry(
+      tripId: '',
+      location: LiveLocation(
+        latitude: latitude,
+        longitude: longitude,
+        speedKmh: speedKmh,
+        headingDegrees: heading,
+        updatedAt: now,
+      ),
+      batteryPercent: batteryPercent,
+      networkStatus: networkStatus,
     );
-    _locationController.add(liveLoc);
-
-    _healthController.add(DriverDeviceHealth(
-      gps: GpsStatus.active,
-      network: networkStatus == 'offline' ? NetworkStatus.offline : NetworkStatus.online,
-      batteryPercent: batteryPercent ?? 85,
-      lastSyncAt: now,
-      currentSpeedKmh: speedKmh,
-      currentHeading: heading,
-    ));
-
-    if (_currentTrackingSessionId != null) {
-      try {
-        await _client.rpc('record_tracking_location', params: {
-          'p_tracking_session_id': _currentTrackingSessionId,
-          'p_latitude': latitude,
-          'p_longitude': longitude,
-          'p_speed': speedKmh,
-          'p_heading': heading,
-          'p_recorded_at': now.toIso8601String(),
-          'p_source': 'driver_primary',
-          'p_battery_percentage': batteryPercent,
-          'p_network_status': networkStatus,
-        });
-      } catch (_) {}
-    }
   }
 
   Trip _mapTrip(Map<String, dynamic> json) {

@@ -148,6 +148,57 @@ class _LiveMap extends ConsumerWidget {
               ],
             ),
 
+            // Live Realtime Telemetry floating pill at top
+            Positioned(
+              top: 14,
+              left: 16,
+              right: 16,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.95),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.statusGood,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Live GPS Telemetry · ${location.speedKmh?.toInt() ?? 0} km/h',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '·',
+                        style: TextStyle(color: Colors.grey.shade400),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        route.name,
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // Dynamic Live ETA Card overlaid at bottom
             Positioned(
               left: 16,
