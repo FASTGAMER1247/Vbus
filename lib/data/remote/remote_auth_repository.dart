@@ -16,20 +16,6 @@ class RemoteAuthRepository implements AuthRepository {
     required String username,
     required String password,
   }) async {
-    // 1. Fast demo login support for seamless development & verification
-    if (password.trim() == 'demo') {
-      final query = username.trim().toLowerCase();
-      final match = MockSeed.allDemoUsers.where(
-        (u) =>
-            u.name.toLowerCase() == query ||
-            u.name.toLowerCase().contains(query) ||
-            u.role.name.toLowerCase() == query,
-      );
-      if (match.isNotEmpty) {
-        return match.first;
-      }
-    }
-
     try {
       final clean = username.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '');
       final emailUser = switch (clean) {
@@ -55,22 +41,24 @@ class RemoteAuthRepository implements AuthRepository {
       }
 
       return await _fetchUserProfile(user.id);
-    } on sb.AuthException catch (e) {
-      // If Supabase Auth fails on a demo account, fall back to seeded user if password is demo
+    } catch (e) {
+      // Fallback: If network or auth fails on a demo account, use seeded demo user
       if (password.trim() == 'demo') {
         final query = username.trim().toLowerCase();
         final match = MockSeed.allDemoUsers.where(
           (u) =>
               u.name.toLowerCase() == query ||
               u.name.toLowerCase().contains(query) ||
-              u.role.name.toLowerCase() == query,
+              u.role.name.toLowerCase() == query ||
+              (query == 'driver' && u.role == UserRole.driver) ||
+              (query == 'manager' && u.role == UserRole.manager) ||
+              (query == 'student' && u.role == UserRole.student) ||
+              (query == 'admin' && u.role == UserRole.masterAdmin),
         );
         if (match.isNotEmpty) return match.first;
       }
-      throw AuthException(e.message);
-    } catch (e) {
       if (e is AuthException) rethrow;
-      throw AuthException('Authentication failed: ${e.toString()}');
+      throw AuthException(e is sb.AuthException ? e.message : 'Authentication failed: ${e.toString()}');
     }
   }
 
