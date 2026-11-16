@@ -11,10 +11,10 @@ import 'package:campus_transit/app/providers.dart';
 
 void main() {
   group('Supabase Backend Reconciliation & Fallback Architecture', () {
-    test('SupabaseConfig defaults to unconfigured in test environment', () {
-      expect(SupabaseConfig.url, isEmpty);
-      expect(SupabaseConfig.anonKey, isEmpty);
-      expect(SupabaseConfig.isConfigured, isFalse);
+    test('SupabaseConfig is well-formed with configured backend credentials', () {
+      expect(SupabaseConfig.url, isNotEmpty);
+      expect(SupabaseConfig.anonKey, isNotEmpty);
+      expect(SupabaseConfig.isConfigured, isTrue);
     });
 
     test('supabaseClientProvider returns null when unconfigured', () {

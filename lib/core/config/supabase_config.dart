@@ -8,7 +8,7 @@ class SupabaseConfig {
   /// ⬇️ PASTE YOUR SUPABASE ANON / PUBLISHABLE KEY INSIDE THE QUOTES BELOW ⬇️
   static const String anonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: 'PASTE_YOUR_SUPABASE_ANON_KEY_HERE',
+    defaultValue: 'sb_publishable_fzgVuCJaILrrz7xWnA9d9A_I6SUCyZV',
   );
 
   static const bool useRemote = bool.fromEnvironment(

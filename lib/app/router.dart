@@ -15,6 +15,7 @@ import '../features/manager/compliance_alerts_screen.dart';
 import '../features/manager/create_trip_screen.dart';
 import '../features/manager/driver_form_screen.dart';
 import '../features/manager/driver_list_screen.dart';
+import '../features/manager/erp_sync_screen.dart';
 import '../features/manager/manager_home_screen.dart';
 import '../features/manager/manager_live_fleet_screen.dart';
 import '../features/manager/manager_trip_list_screen.dart';
@@ -77,6 +78,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/manager', builder: (context, state) => const ManagerHomeScreen()),
       GoRoute(path: '/manager/fleet', builder: (context, state) => const ManagerLiveFleetScreen()),
       GoRoute(path: '/manager/compliance', builder: (context, state) => const ComplianceAlertsScreen()),
+      GoRoute(path: '/manager/erp-sync', builder: (context, state) => const ErpSyncScreen()),
       GoRoute(path: '/manager/buses', builder: (context, state) => const BusListScreen()),
       GoRoute(path: '/manager/buses/new', builder: (context, state) => const BusFormScreen()),
       GoRoute(path: '/manager/drivers', builder: (context, state) => const DriverListScreen()),

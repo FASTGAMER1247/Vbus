@@ -21,6 +21,7 @@ class ManagerHomeScreen extends ConsumerWidget {
     final driversAsync = ref.watch(driversProvider);
     final routesAsync = ref.watch(routesProvider);
     final assignmentsAsync = ref.watch(assignmentsProvider);
+    final studentsAsync = ref.watch(enrolledStudentsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -38,6 +39,7 @@ class ManagerHomeScreen extends ConsumerWidget {
               ref.invalidate(routesProvider);
               ref.invalidate(assignmentsProvider);
               ref.invalidate(tripsProvider);
+              ref.invalidate(enrolledStudentsProvider);
             },
           ),
           IconButton(
@@ -210,6 +212,14 @@ class ManagerHomeScreen extends ConsumerWidget {
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push('/manager/assignments'),
                     ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const CircleAvatar(backgroundColor: AppColors.managerAccent, foregroundColor: Colors.white, child: Text('5')),
+                      title: const Text('Student Roster & Fees (vmax ERP)'),
+                      subtitle: Text('${studentsAsync.value?.length ?? 0} enrolled students synced'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/manager/erp-sync'),
+                    ),
                   ],
                 ),
               ),
@@ -235,6 +245,14 @@ class ManagerHomeScreen extends ConsumerWidget {
                       subtitle: const Text('Monitor RC, PUC, insurance, and license expiration statuses'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push('/manager/compliance'),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.sync_alt, color: AppColors.managerAccent),
+                      title: const Text('College ERP Sync (vmax Autonomous ERP)'),
+                      subtitle: const Text('Synchronize student fee clearance & bus pass tracking eligibility'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/manager/erp-sync'),
                     ),
                   ],
                 ),

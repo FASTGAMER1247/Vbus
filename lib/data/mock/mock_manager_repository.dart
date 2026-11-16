@@ -3,6 +3,7 @@ import 'dart:math';
 
 import '../../core/models/compliance_models.dart';
 import '../../core/models/driver_models.dart';
+import '../../core/models/erp_models.dart';
 import '../../core/models/manager_models.dart';
 import '../../core/models/transport_models.dart';
 import '../../core/models/trip_stage.dart';
@@ -300,6 +301,157 @@ class MockManagerRepository implements ManagerRepository {
       yield list;
       step++;
       await Future.delayed(const Duration(seconds: 3));
+    }
+  }
+
+  final List<ErpStudent> _students = [
+    ErpStudent(
+      id: 'stu-1',
+      rollNumber: '21911A0542',
+      name: 'K. Sai Charan',
+      email: '21911a0542@vjit.ac.in',
+      phone: '+91 98480 22334',
+      department: 'Computer Science and Engineering',
+      academicYear: '2025-26',
+      section: 'CSE-B',
+      routeId: 'route-7',
+      routeName: 'Route 7 (Mehdipatnam - Campus)',
+      stopName: 'Bharat Nagar',
+      feeStatus: ErpFeeStatus.paid,
+      feeAmount: 34000,
+      paidAmount: 34000,
+      receiptNumber: 'VJIT/REC/2025/08492',
+      lastSyncedAt: DateTime.now().subtract(const Duration(hours: 4)),
+    ),
+    ErpStudent(
+      id: 'stu-2',
+      rollNumber: '21911A0589',
+      name: 'P. Rahul Reddy',
+      email: '21911a0589@vjit.ac.in',
+      phone: '+91 97001 44552',
+      department: 'Information Technology',
+      academicYear: '2025-26',
+      section: 'IT-A',
+      routeId: 'route-7',
+      routeName: 'Route 7 (Mehdipatnam - Campus)',
+      stopName: 'Central Silk Board',
+      feeStatus: ErpFeeStatus.paid,
+      feeAmount: 34000,
+      paidAmount: 34000,
+      receiptNumber: 'VJIT/REC/2025/08511',
+      lastSyncedAt: DateTime.now().subtract(const Duration(hours: 4)),
+    ),
+    ErpStudent(
+      id: 'stu-3',
+      rollNumber: '22911A0412',
+      name: 'S. Ananya Sharma',
+      email: '22911a0412@vjit.ac.in',
+      phone: '+91 94412 88990',
+      department: 'Electronics & Communication',
+      academicYear: '2025-26',
+      section: 'ECE-C',
+      routeId: 'route-12',
+      routeName: 'Route 12 (Kukatpally - Campus)',
+      stopName: 'KPHB Colony',
+      feeStatus: ErpFeeStatus.gracePeriod,
+      feeAmount: 36000,
+      paidAmount: 18000,
+      receiptNumber: 'VJIT/REC/2025/09120',
+      lastSyncedAt: DateTime.now().subtract(const Duration(hours: 4)),
+    ),
+    ErpStudent(
+      id: 'stu-4',
+      rollNumber: '23911A0105',
+      name: 'M. Vikram Kumar',
+      email: '23911a0105@vjit.ac.in',
+      phone: '+91 99882 11223',
+      department: 'Civil Engineering',
+      academicYear: '2025-26',
+      section: 'CIVIL-A',
+      routeId: 'route-7',
+      routeName: 'Route 7 (Mehdipatnam - Campus)',
+      stopName: 'BTM Layout',
+      feeStatus: ErpFeeStatus.pending,
+      feeAmount: 34000,
+      paidAmount: 0,
+      receiptNumber: null,
+      lastSyncedAt: DateTime.now().subtract(const Duration(hours: 4)),
+    ),
+    ErpStudent(
+      id: 'stu-5',
+      rollNumber: '22911A05F4',
+      name: 'T. Sneha Patel',
+      email: '22911a05f4@vjit.ac.in',
+      phone: '+91 98845 66778',
+      department: 'Computer Science and Engineering',
+      academicYear: '2025-26',
+      section: 'CSE-D',
+      routeId: 'route-12',
+      routeName: 'Route 12 (Kukatpally - Campus)',
+      stopName: 'Miyapur Metro',
+      feeStatus: ErpFeeStatus.overdue,
+      feeAmount: 36000,
+      paidAmount: 0,
+      receiptNumber: null,
+      lastSyncedAt: DateTime.now().subtract(const Duration(hours: 4)),
+    ),
+  ];
+
+  @override
+  Future<ErpSyncResult> syncFromCollegeErp({
+    required String collegeId,
+    List<ErpStudent>? manualStudents,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    if (manualStudents != null && manualStudents.isNotEmpty) {
+      for (final s in manualStudents) {
+        final existingIdx = _students.indexWhere((x) => x.rollNumber == s.rollNumber);
+        if (existingIdx >= 0) {
+          _students[existingIdx] = s.copyWith(lastSyncedAt: DateTime.now());
+        } else {
+          _students.add(s.copyWith(lastSyncedAt: DateTime.now()));
+        }
+      }
+    } else {
+      for (var i = 0; i < _students.length; i++) {
+        _students[i] = _students[i].copyWith(lastSyncedAt: DateTime.now());
+      }
+    }
+
+    final paid = _students.where((s) => s.feeStatus == ErpFeeStatus.paid).length;
+    final pending = _students.length - paid;
+
+    return ErpSyncResult(
+      totalFetched: _students.length,
+      createdCount: manualStudents?.length ?? 0,
+      updatedCount: _students.length,
+      paidCount: paid,
+      pendingCount: pending,
+      provider: 'vmax College ERP',
+      syncedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<List<ErpStudent>> getEnrolledStudents(String collegeId) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    return List.unmodifiable(_students);
+  }
+
+  @override
+  Future<void> updateStudentFeeStatus({
+    required String collegeId,
+    required String rollNumber,
+    required ErpFeeStatus status,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final idx = _students.indexWhere((s) => s.rollNumber == rollNumber);
+    if (idx >= 0) {
+      _students[idx] = _students[idx].copyWith(
+        feeStatus: status,
+        lastSyncedAt: DateTime.now(),
+      );
     }
   }
 }

@@ -1,8 +1,9 @@
 import '../../core/models/compliance_models.dart';
+import '../../core/models/erp_models.dart';
 import '../../core/models/manager_models.dart';
 import '../../core/models/transport_models.dart';
 
-/// Abstract contract for Manager operations (flow.md M1–M5, prd.md Modules 4–7, 11, 13).
+/// Abstract contract for Manager operations (flow.md M1–M5, prd.md Modules 4–7, 11, 13, 14).
 abstract class ManagerRepository {
   /// Dashboard metrics (M2).
   Future<FleetSummary> getFleetSummary(String collegeId);
@@ -38,4 +39,9 @@ abstract class ManagerRepository {
 
   /// Fleet & Driver Compliance and document expiry alerts (BUS_APP Phase 25).
   Future<List<DocumentAlert>> getComplianceAlerts(String collegeId);
+
+  /// College ERP Student Roster & Transport Fee Sync (BUS_APP Phase 21, prd.md Module 14).
+  Future<ErpSyncResult> syncFromCollegeErp({required String collegeId, List<ErpStudent>? manualStudents});
+  Future<List<ErpStudent>> getEnrolledStudents(String collegeId);
+  Future<void> updateStudentFeeStatus({required String collegeId, required String rollNumber, required ErpFeeStatus status});
 }
