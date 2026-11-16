@@ -51,6 +51,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  void _quickFill(String username) {
+    _collegeController.text = 'VJIT';
+    _usernameController.text = username;
+    _passwordController.text = 'demo';
+    _submit();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,6 +115,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     label: 'Log in',
                     isLoading: _isLoading,
                     onPressed: _submit,
+                  ),
+                  const SizedBox(height: 24),
+                  const Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          'OR ONE-TAP DEMO LOGIN',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.1,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.drive_eta, size: 16),
+                        label: const Text('Driver: Ramesh'),
+                        onPressed: _isLoading ? null : () => _quickFill('Ramesh K'),
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.business_center, size: 16),
+                        label: const Text('Manager: Priya'),
+                        onPressed: _isLoading ? null : () => _quickFill('Priya Nair'),
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.school, size: 16),
+                        label: const Text('Student: Sanjay'),
+                        onPressed: _isLoading ? null : () => _quickFill('Sanjay'),
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.security, size: 16),
+                        label: const Text('Admin'),
+                        onPressed: _isLoading ? null : () => _quickFill('Platform Admin'),
+                      ),
+                    ],
                   ),
                 ],
               ),
