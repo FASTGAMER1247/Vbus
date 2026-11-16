@@ -1,4 +1,5 @@
 import '../../core/models/app_user.dart';
+import '../../core/models/role.dart';
 import '../repositories/auth_repository.dart';
 import 'mock_seed.dart';
 
