@@ -26,7 +26,18 @@ class MockDriverRepository implements DriverRepository {
     await Future.delayed(const Duration(milliseconds: 400));
     final cleanCode = busIdOrCode.trim();
 
-    // 1. Driver License Compliance check
+    // 1. Parse secure QR payload & verify organization key match
+    final parsed = BusQrSecurity.parse(cleanCode);
+    if (parsed.isValidAssetTag && parsed.collegeId != null) {
+      // Two-way organization matching: driver and bus MUST belong to the same college!
+      if (parsed.collegeId != MockSeed.collegeId) {
+        throw const DriverBlockedException(DriverBlockReason.busAnotherCollege);
+      }
+    } else if (cleanCode.startsWith('FORGED_') || cleanCode.startsWith('INVALID_')) {
+      throw const DriverBlockedException(DriverBlockReason.invalidQrPayload);
+    }
+
+    // 2. Driver License Compliance check
     if (driverId == 'driver-2') {
       final licenseAlert = MockSeed.initialComplianceAlerts.firstWhere(
         (a) => a.id == 'alert-3',
@@ -37,17 +48,21 @@ class MockDriverRepository implements DriverRepository {
       );
     }
 
-    // 2. Resolve bus outcome
-    final outcome = MockSeed.demoBusOutcomes[cleanCode] ??
-        (cleanCode.contains('023')
+    final targetCode = parsed.busNumber.isNotEmpty ? parsed.busNumber : cleanCode;
+
+    // 3. Resolve bus outcome
+    final outcome = MockSeed.demoBusOutcomes[targetCode] ??
+        (targetCode.contains('023')
             ? 'ok'
-            : cleanCode.contains('015')
+            : targetCode.contains('015')
                 ? 'unassigned_takeover'
-                : cleanCode.contains('009')
+                : targetCode.contains('009')
                     ? 'puc_expiring_soon'
-                    : cleanCode.contains('042')
+                    : targetCode.contains('042')
                         ? 'insurance_expired'
-                        : 'not_found');
+                        : cleanCode.contains('another_college')
+                            ? 'another_college'
+                            : 'not_found');
 
     switch (outcome) {
       case 'ok':

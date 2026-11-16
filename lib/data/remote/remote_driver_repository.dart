@@ -57,9 +57,13 @@ class RemoteDriverRepository implements DriverRepository {
     required String busIdOrCode,
   }) async {
     try {
+      final clean = busIdOrCode.trim();
+      final parsed = BusQrSecurity.parse(clean);
+      final codeToSend = parsed.isValidAssetTag ? parsed.busNumber : clean;
+
       final response = await _client.rpc(
         'start_trip_by_bus',
-        params: {'p_qr_code': busIdOrCode.trim()},
+        params: {'p_qr_code': codeToSend},
       );
 
       final map = response is Map<String, dynamic> ? response : <String, dynamic>{};
@@ -93,8 +97,9 @@ class RemoteDriverRepository implements DriverRepository {
 
   void _handleRpcError(String code, String? message) {
     switch (code) {
-      case 'BUS_NOT_FOUND':
       case 'INVALID_QR_CODE':
+        throw const DriverBlockedException(DriverBlockReason.invalidQrPayload);
+      case 'BUS_NOT_FOUND':
         throw const DriverBlockedException(DriverBlockReason.busNotFound);
       case 'TENANT_MISMATCH':
         throw const DriverBlockedException(DriverBlockReason.busAnotherCollege);

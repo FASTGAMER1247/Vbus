@@ -27,9 +27,9 @@ dependencies:
   # permission-request screens can be built against the real plugin)
   geolocator: ^12.0.0
 
-  # Bus QR scanning (driver flow) — UI only for now; the backend
-  # RPC to resolve a scanned code to a trip doesn't exist yet
+  # Bus QR scanning & custom in-app QR code asset generation
   mobile_scanner: ^5.2.3
+  qr_flutter: ^4.1.0
 
   # Small utilities
   intl: ^0.19.0

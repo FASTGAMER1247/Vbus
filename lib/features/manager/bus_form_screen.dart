@@ -6,6 +6,7 @@ import '../../app/providers.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_typography.dart';
 import '../../core/models/transport_models.dart';
+import '../../core/widgets/bus_qr_dialog.dart';
 import '../../core/widgets/primary_button.dart';
 import 'manager_providers.dart';
 
@@ -46,12 +47,18 @@ class _BusFormScreenState extends ConsumerState<BusFormScreen> {
       capacity: int.tryParse(_capacityController.text.trim()) ?? 40,
     );
 
-    await ref.read(managerRepositoryProvider).saveBus(collegeId: collegeId, bus: bus);
+    final savedBus = await ref.read(managerRepositoryProvider).saveBus(collegeId: collegeId, bus: bus);
     ref.invalidate(busesProvider);
     ref.invalidate(fleetSummaryProvider);
 
     if (mounted) {
-      context.pop();
+      await showBusQrDialog(
+        context,
+        bus: savedBus,
+        collegeId: collegeId,
+        collegeName: user?.collegeName ?? 'College Transport Operations',
+      );
+      if (mounted) context.pop();
     }
   }
 

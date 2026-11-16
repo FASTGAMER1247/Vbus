@@ -89,5 +89,44 @@ void main() {
       final summary = await managerRepo.getFleetSummary('college-vjit');
       expect(summary.complianceWarningsCount, greaterThan(0));
     });
+
+    test('Custom in-app generated QR asset tag is parsed and verified cleanly', () async {
+      // Generated using BusQrSecurity
+      const secureQr = 'VBUS_ASSET:v1:college-vjit:bus-023:023';
+      final result = await driverRepo.identifyBus(
+        driverId: 'driver-1',
+        busIdOrCode: secureQr,
+      );
+
+      expect(result.trip.bus.busNumber, '023');
+      expect(result.isUnassignedTakeover, isFalse);
+    });
+
+    test('Two-way organization key mismatch blocks driver from other institutions', () async {
+      // Bus belongs to a different college: 'college-cbit'
+      const foreignBusQr = 'VBUS_ASSET:v1:college-cbit:bus-999:999';
+
+      try {
+        await driverRepo.identifyBus(
+          driverId: 'driver-1', // belongs to college-vjit
+          busIdOrCode: foreignBusQr,
+        );
+        fail('Should have thrown DriverBlockedException due to organization mismatch');
+      } on DriverBlockedException catch (e) {
+        expect(e.reason, DriverBlockReason.busAnotherCollege);
+      }
+    });
+
+    test('Forged or unrecognized external QR code is rejected with invalidQrPayload', () async {
+      try {
+        await driverRepo.identifyBus(
+          driverId: 'driver-1',
+          busIdOrCode: 'FORGED_RANDOM_INTERNET_QR_DATA',
+        );
+        fail('Should have thrown DriverBlockedException for forged QR');
+      } on DriverBlockedException catch (e) {
+        expect(e.reason, DriverBlockReason.invalidQrPayload);
+      }
+    });
   });
 }

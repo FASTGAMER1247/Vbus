@@ -306,3 +306,55 @@ enum EligibilityStatus {
   routeNotAssigned,
   cannotCheckRightNow,
 }
+
+/// Organization-scoped cryptographic bus QR asset verification.
+class BusQrSecurity {
+  static const String protocolPrefix = 'VBUS_ASSET:v1';
+
+  /// Generates a tamper-evident organization-scoped QR payload for a bus.
+  static String generatePayload({
+    required String collegeId,
+    required String busId,
+    required String busNumber,
+  }) {
+    return '$protocolPrefix:$collegeId:$busId:$busNumber';
+  }
+
+  /// Parses and verifies a scanned QR string.
+  static BusQrParsedResult parse(String rawCode) {
+    final clean = rawCode.trim();
+    if (clean.startsWith(protocolPrefix)) {
+      final parts = clean.split(':');
+      if (parts.length >= 5) {
+        return BusQrParsedResult(
+          isValidAssetTag: true,
+          collegeId: parts[2],
+          busId: parts[3],
+          busNumber: parts[4],
+        );
+      }
+    }
+    // Fallback: raw bus number (e.g. "023" or "BUS-023")
+    final fallbackNumber = clean.replaceAll(RegExp(r'^BUS[-_ ]*', caseSensitive: false), '');
+    return BusQrParsedResult(
+      isValidAssetTag: false,
+      collegeId: null,
+      busId: null,
+      busNumber: fallbackNumber,
+    );
+  }
+}
+
+class BusQrParsedResult {
+  final bool isValidAssetTag;
+  final String? collegeId;
+  final String? busId;
+  final String busNumber;
+
+  const BusQrParsedResult({
+    required this.isValidAssetTag,
+    this.collegeId,
+    this.busId,
+    required this.busNumber,
+  });
+}

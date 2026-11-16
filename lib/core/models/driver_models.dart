@@ -39,14 +39,15 @@ enum DriverBlockReason {
   busAlreadyActive,
   locationPermissionDenied,
   driverLicenseExpired,
-  busDocumentExpired;
+  busDocumentExpired,
+  invalidQrPayload;
 
   String get message {
     switch (this) {
       case DriverBlockReason.busNotFound:
         return 'This bus could not be found. Check the code or Bus ID.';
       case DriverBlockReason.busAnotherCollege:
-        return 'This bus belongs to another institution and is not available.';
+        return 'Security Violation: This bus belongs to another institution and cannot be operated.';
       case DriverBlockReason.busNotAssignedToDriver:
         return 'This bus is assigned to another driver. Contact your transport manager.';
       case DriverBlockReason.busAlreadyActive:
@@ -57,6 +58,8 @@ enum DriverBlockReason {
         return 'Your commercial driving license has expired. Contact your manager immediately.';
       case DriverBlockReason.busDocumentExpired:
         return 'This bus has expired legal documents (RC/PUC/Insurance) and cannot be operated.';
+      case DriverBlockReason.invalidQrPayload:
+        return 'Invalid QR Code: Only official organization bus asset tags are verified.';
     }
   }
 }
