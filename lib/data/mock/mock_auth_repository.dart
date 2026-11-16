@@ -21,8 +21,16 @@ class MockAuthRepository implements AuthRepository {
       throw const AuthException('Incorrect username or password.');
     }
 
+    final clean = username.trim().toLowerCase();
     final match = MockSeed.allDemoUsers.where(
-      (u) => u.name.toLowerCase() == username.trim().toLowerCase(),
+      (u) =>
+          u.name.toLowerCase() == clean ||
+          u.name.toLowerCase().contains(clean) ||
+          u.role.name.toLowerCase() == clean ||
+          (clean == 'driver' && u.role == UserRole.driver) ||
+          (clean == 'manager' && u.role == UserRole.manager) ||
+          (clean == 'student' && u.role == UserRole.student) ||
+          (clean == 'admin' && u.role == UserRole.masterAdmin),
     );
 
     if (match.isEmpty) {

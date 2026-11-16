@@ -31,9 +31,18 @@ class RemoteAuthRepository implements AuthRepository {
     }
 
     try {
+      final clean = username.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '');
+      final emailUser = switch (clean) {
+        'rameshk' || 'ramesh' || 'driver' => 'ramesh',
+        'priyanair' || 'priya' || 'manager' => 'priya',
+        'sanjay' || 'student' => 'sanjay',
+        'platformadmin' || 'admin' => 'admin',
+        _ => clean,
+      };
+
       final email = username.contains('@')
-          ? username
-          : '$username@${collegeCode.toLowerCase().trim()}.campus.internal';
+          ? username.trim()
+          : '$emailUser@${collegeCode.toLowerCase().trim()}.campus.internal';
 
       final response = await _client.auth.signInWithPassword(
         email: email,
